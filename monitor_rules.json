@@ -1,0 +1,30 @@
+{
+  "mode": "whitelist",
+  "whitelist": [
+    "rr3---sn-5ualdnsk.googlevideo.com",
+    "rr1---sn-5uaeznly.googlevideo.com",
+    "rr2---sn-5uaezn6z.googlevideo.com",
+    "www.youtube.com",
+    "rr3---sn-5ualdns7.googlevideo.com",
+    "rr5---sn-q4flrnel.googlevideo.com",
+    "rr1---sn-4g5edndl.googlevideo.com",
+    "rr4---sn-q4fzen7l.googlevideo.com",
+    "rr2---sn-q4fl6nsl.googlevideo.com",
+    "rr3---sn-hgn7yn7e.googlevideo.com"
+  ],
+  "blacklist": [
+    "go-updater.brave.com",
+    "collector.bsg.brave.com",
+    "componentupdater.brave.com",
+    "star-randsrv.bsg.brave.com",
+    "static.cdninstagram.com",
+    "www.instagram.com",
+    "github.githubassets.com",
+    "watson.events.data.microsoft.com",
+    "mail.google.com",
+    "cdn.search.brave.com",
+    "www.google.com",
+    "accounts.google.com"
+  ],
+  "auto_apply": true
+}
