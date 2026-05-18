@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """
 DomainFront Tunnel — Bypass DPI censorship via Google Apps Script.
+
+Run a local HTTP proxy that tunnels all traffic through a Google Apps
+Script relay fronted by www.google.com (TLS SNI shows www.google.com
+while the encrypted Host header points at script.google.com).
 """
 
 import argparse
@@ -9,8 +13,15 @@ import json
 import logging
 import os
 import sys
+import subprocess
+import threading
+import webbrowser
+import time
+import socket
 from pathlib import Path
 
+# Project modules live under ./src — put that folder on sys.path so the
+# historical flat imports ("from proxy_server import …") keep working.
 _SRC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src")
 if _SRC_DIR not in sys.path:
     sys.path.insert(0, _SRC_DIR)
@@ -108,7 +119,66 @@ def parse_args():
         action="store_true",
         help="Scan Google IPs to find the fastest reachable one and exit.",
     )
+    parser.add_argument(
+        "--no-monitor",
+        action="store_true",
+        help="Do not auto-start the monitor web dashboard.",
+    )
+    parser.add_argument(
+        "--no-browser",
+        action="store_true",
+        help="Do not auto-open browser for monitor dashboard.",
+    )
     return parser.parse_args()
+
+
+def open_browser():
+    """Open default browser to monitor dashboard."""
+    try:
+        webbrowser.open("http://localhost:8888")
+        logging.getLogger("Main").info("Opened browser to http://localhost:8888")
+    except Exception as e:
+        logging.getLogger("Main").warning(f"Could not open browser: {e}")
+
+
+def open_browser_delayed():
+    """Open browser after a short delay to ensure monitor is ready."""
+    time.sleep(2)  # Wait 2 seconds for monitor to start
+    open_browser()
+
+
+def start_monitor(no_browser=False):
+    """Automatically start monitor.py in a new window and optionally open browser."""
+    try:
+        monitor_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "monitor.py")
+        if os.path.exists(monitor_path):
+            # Check if monitor is already running on port 8888
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(0.5)
+            result = sock.connect_ex(('127.0.0.1', 8888))
+            sock.close()
+            
+            if result == 0:
+                logging.getLogger("Main").info("Monitor already running on port 8888")
+                if not no_browser:
+                    open_browser()
+                return
+            
+            # Start monitor in new window
+            subprocess.Popen(
+                ["start", "cmd", "/k", "python", monitor_path],
+                shell=True,
+                cwd=os.path.dirname(monitor_path)
+            )
+            logging.getLogger("Main").info("Monitor started in new window")
+            
+            # Open browser after delay (unless disabled)
+            if not no_browser:
+                threading.Thread(target=open_browser_delayed, daemon=True).start()
+        else:
+            logging.getLogger("Main").warning("monitor.py not found - skipping auto-start")
+    except Exception as e:
+        logging.getLogger("Main").warning(f"Could not auto-start monitor: {e}")
 
 
 def main():
@@ -148,8 +218,8 @@ def main():
             except EOFError:
                 answer = "n"
             if answer in ("", "y", "yes"):
-                import subprocess
-                rc = subprocess.call([sys.executable, wizard])
+                import subprocess as sp
+                rc = sp.call([sys.executable, wizard])
                 if rc != 0:
                     sys.exit(rc)
                 try:
@@ -240,6 +310,11 @@ def main():
             log.info("  [%d] %s", i + 1, sid)
     else:
         log.info("Script ID         : %s", script_ids)
+
+    # ========== اجرای خودکار monitor.py و باز کردن مرورگر ==========
+    if not args.no_monitor:
+        start_monitor(no_browser=args.no_browser)
+    # ===========================================================
 
     if not os.path.exists(CA_CERT_FILE):
         from mitm import MITMCertManager
