@@ -1,0 +1,7 @@
+{
+    "log_path": "logs/proxy.log",
+    "web_port": 8888,
+    "daily_limit": 20000,
+    "refresh_rate": 2,
+    "auto_open_browser": true
+}
